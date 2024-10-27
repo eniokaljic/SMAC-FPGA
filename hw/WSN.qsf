@@ -1,0 +1,112 @@
+# -------------------------------------------------------------------------- #
+#
+# Copyright (C) 1991-2012 Altera Corporation
+# Your use of Altera Corporation's design tools, logic functions 
+# and other software and tools, and its AMPP partner logic 
+# functions, and any output files from any of the foregoing 
+# (including device programming or simulation files), and any 
+# associated documentation or information are expressly subject 
+# to the terms and conditions of the Altera Program License 
+# Subscription Agreement, Altera MegaCore Function License 
+# Agreement, or other applicable license agreement, including, 
+# without limitation, that your use is for the sole purpose of 
+# programming logic devices manufactured by Altera and sold by 
+# Altera or its authorized distributors.  Please refer to the 
+# applicable agreement for further details.
+#
+# -------------------------------------------------------------------------- #
+#
+# Quartus II 32-bit
+# Version 12.1 Build 177 11/07/2012 SJ Full Version
+# Date created = 22:10:27  June 21, 2013
+#
+# -------------------------------------------------------------------------- #
+#
+# Notes:
+#
+# 1) The default values for assignments are stored in the file:
+#		WSN_assignment_defaults.qdf
+#    If this file doesn't exist, see file:
+#		assignment_defaults.qdf
+#
+# 2) Altera recommends that you do not modify this file. This
+#    file is updated automatically by the Quartus II software
+#    and any changes you make may be lost or overwritten.
+#
+# -------------------------------------------------------------------------- #
+
+
+set_global_assignment -name FAMILY "Cyclone II"
+set_global_assignment -name DEVICE EP2C5T144C8
+set_global_assignment -name TOP_LEVEL_ENTITY wsn
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION 12.1
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "22:10:27  JUNE 21, 2013"
+set_global_assignment -name LAST_QUARTUS_VERSION "12.1 SP1.33"
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 1
+set_global_assignment -name EDA_SIMULATION_TOOL "ModelSim-Altera (VHDL)"
+set_global_assignment -name EDA_OUTPUT_DATA_FORMAT VHDL -section_id eda_simulation
+set_global_assignment -name USE_CONFIGURATION_DEVICE ON
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "NO HEAT SINK WITH STILL AIR"
+set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+set_global_assignment -name FLOW_ENABLE_POWER_ANALYZER ON
+set_global_assignment -name POWER_DEFAULT_INPUT_IO_TOGGLE_RATE "9600 TRANSITIONS/S"
+set_global_assignment -name POWER_REPORT_POWER_DISSIPATION ON
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+
+set_location_assignment PIN_88 -to clk
+set_location_assignment PIN_99 -to led[2]
+set_location_assignment PIN_100 -to led[1]
+set_location_assignment PIN_101 -to led[0]
+set_location_assignment PIN_91 -to rst
+set_location_assignment PIN_129 -to rf_rx
+set_location_assignment PIN_125 -to rf_tx
+set_location_assignment PIN_3 -to rf_enable
+
+set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
+set_global_assignment -name VHDL_SHOW_LMF_MAPPING_MESSAGES OFF
+set_global_assignment -name SMART_RECOMPILE ON
+set_global_assignment -name OPTIMIZE_POWER_DURING_SYNTHESIS "NORMAL COMPILATION"
+set_global_assignment -name OPTIMIZE_POWER_DURING_FITTING OFF
+set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE AREA
+set_global_assignment -name ADV_NETLIST_OPT_SYNTH_WYSIWYG_REMAP ON
+set_global_assignment -name RTLV_GROUP_COMB_LOGIC_IN_CLOUD OFF
+set_global_assignment -name RTLV_GROUP_RELATED_NODES ON
+set_global_assignment -name RTLV_SIMPLIFIED_LOGIC ON
+set_global_assignment -name RTLV_REMOVE_FANOUT_FREE_REGISTERS ON
+set_global_assignment -name ENABLE_SIGNALTAP OFF
+set_global_assignment -name USE_SIGNALTAP_FILE wsn.stp
+set_global_assignment -name OPTIMIZE_HOLD_TIMING "IO PATHS AND MINIMUM TPD PATHS"
+set_global_assignment -name OPTIMIZE_MULTI_CORNER_TIMING ON
+set_global_assignment -name FITTER_EFFORT "AUTO FIT"
+set_global_assignment -name VHDL_FILE smac.vhd
+set_global_assignment -name SDC_FILE WSN.sdc
+set_global_assignment -name VHDL_FILE basic_uart.vhd
+set_global_assignment -name QIP_FILE ram512.qip
+set_global_assignment -name VHDL_FILE smac_tx_buffer.vhd
+set_global_assignment -name VHDL_FILE smac_rx_buffer.vhd
+set_global_assignment -name VHDL_FILE smac_tx_controller.vhd
+set_global_assignment -name VHDL_FILE smac_rx_controller.vhd
+set_global_assignment -name MIF_FILE app_tx_ram256.mif
+set_global_assignment -name QIP_FILE ram256dp.qip
+set_global_assignment -name VHDL_FILE crc_gen.vhd
+set_global_assignment -name SIGNALTAP_FILE wsn.stp
+set_global_assignment -name VHDL_FILE smac_controller.vhd
+set_global_assignment -name VHDL_FILE app.vhd
+set_global_assignment -name VHDL_FILE wsn.vhd
+set_global_assignment -name VHDL_FILE timer.vhd
+set_global_assignment -name VHDL_FILE timer_clock.vhd
+set_global_assignment -name VHDL_FILE random_gen.vhd
+set_global_assignment -name GENERATE_JAM_FILE OFF
+set_global_assignment -name GENERATE_JBC_FILE OFF
+set_global_assignment -name VHDL_FILE noise_gen.vhd
+set_global_assignment -name TIMEQUEST_MULTICORNER_ANALYSIS ON
+set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS OFF
+set_global_assignment -name IGNORE_LCELL_BUFFERS OFF
+set_global_assignment -name VHDL_FILE debounce.vhd
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

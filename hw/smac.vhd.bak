@@ -1,0 +1,471 @@
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.STD_LOGIC_UNSIGNED.ALL;
+USE IEEE.NUMERIC_STD.ALL;
+
+ENTITY smac IS
+	PORT ( clk: IN STD_LOGIC;
+			 rst: IN STD_LOGIC;
+			 led: OUT STD_LOGIC_VECTOR(2 DOWNTO 0);
+			 rf_enable: OUT STD_LOGIC;
+			 rf_tx: OUT STD_LOGIC;
+			 rf_rx: IN STD_LOGIC );
+END smac;
+
+ARCHITECTURE arch_smac OF smac IS
+	COMPONENT basic_uart IS
+		GENERIC ( DIVISOR: NATURAL );
+		PORT (
+			clk: IN STD_LOGIC;   -- system clock
+			reset: IN STD_LOGIC;
+  
+			-- Client interface
+			rx_active: OUT STD_LOGIC;	-- receive in progress
+			rx_data: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);  -- received byte
+			rx_enable: OUT STD_LOGIC;  -- validates received byte (1 system clock spike)
+			rx_error: OUT STD_LOGIC;	-- missing stop bit (1 system clock spike)
+			tx_data: IN STD_LOGIC_VECTOR(7 DOWNTO 0);  -- byte to send
+			tx_enable: IN STD_LOGIC;  -- validates byte to send if tx_ready is '1'
+			tx_ready: OUT STD_LOGIC;  -- if '1', we can send a new byte, otherwise we won't take it
+  
+			-- Physical interface
+			rx: IN STD_LOGIC;
+			tx: OUT STD_LOGIC
+		);
+	END COMPONENT;
+	
+	COMPONENT smac_tx_controller IS
+		PORT ( clk: IN STD_LOGIC;
+				 
+				 reset: IN STD_LOGIC;
+				 load: IN STD_LOGIC;
+				 send: IN STD_LOGIC;
+				 ready: OUT STD_LOGIC;
+				 packet_type: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 packet_src: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 packet_dst: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 packet_dur: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 packet_seq: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 packet_sleeptime: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 packet_payload_len: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+			 			 
+				 payload_address: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 payload_data: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+			 
+				 crc_reset: OUT STD_LOGIC;
+				 crc_soc: OUT STD_LOGIC;
+				 crc_data: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 crc_data_valid: OUT STD_LOGIC;
+				 crc_eoc: OUT STD_LOGIC;
+				 crc_crc: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 crc_crc_valid: IN STD_LOGIC;
+			 
+				 ram_address: OUT STD_LOGIC_VECTOR(8 DOWNTO 0);
+				 ram_data_in: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 ram_wren: OUT STD_LOGIC;
+				 ram_data_out: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+			 
+				 phy_tx_data: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 phy_tx_enable: OUT STD_LOGIC;
+				 phy_tx_ready: IN STD_LOGIC );
+	END COMPONENT;
+	
+	COMPONENT smac_rx_controller IS
+		PORT ( clk: IN STD_LOGIC;
+				 
+				 reset: IN STD_LOGIC;
+				 receive: IN STD_LOGIC;
+				 store: IN STD_LOGIC;
+				 ready: OUT STD_LOGIC;
+				 error: OUT STD_LOGIC;
+				 packet_type: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 packet_src: OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 packet_dst: OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 packet_dur: OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 packet_seq: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 packet_sleeptime: OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 packet_payload_len: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 
+				 payload_address: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 payload_data: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 payload_wren: OUT STD_LOGIC;
+				 
+				 crc_reset: OUT STD_LOGIC;
+				 crc_soc: OUT STD_LOGIC;
+				 crc_data: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 crc_data_valid: OUT STD_LOGIC;
+				 crc_eoc: OUT STD_LOGIC;
+				 crc_crc: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 crc_crc_valid: IN STD_LOGIC;
+				 
+				 ram_address: OUT STD_LOGIC_VECTOR(8 DOWNTO 0);
+				 ram_data_in: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 ram_wren: OUT STD_LOGIC;
+				 ram_data_out: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 
+				 phy_rx_data: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 phy_rx_enable: IN STD_LOGIC;
+				 phy_rx_error: IN STD_LOGIC );
+	END COMPONENT;
+	
+	COMPONENT ram512 IS
+		PORT ( address: IN STD_LOGIC_VECTOR (8 DOWNTO 0);
+				 clock: IN STD_LOGIC  := '1';
+				 data: IN STD_LOGIC_VECTOR (7 DOWNTO 0);
+				 wren: IN STD_LOGIC ;
+				 q: OUT STD_LOGIC_VECTOR (7 DOWNTO 0) );
+	END COMPONENT;
+	
+	COMPONENT crc_gen IS
+		PORT ( clock: IN  STD_LOGIC;
+				 reset: IN  STD_LOGIC;
+				 soc: IN  STD_LOGIC;
+				 data: IN  STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 data_valid: IN  STD_LOGIC;
+				 eoc: IN  STD_LOGIC;
+				 crc: OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 crc_valid: OUT STD_LOGIC );
+	END COMPONENT;
+	
+	COMPONENT ram256dp IS
+		PORT ( clock: IN STD_LOGIC  := '1';
+				 data: IN STD_LOGIC_VECTOR (7 DOWNTO 0);
+				 rdaddress: IN STD_LOGIC_VECTOR (7 DOWNTO 0);
+				 wraddress: IN STD_LOGIC_VECTOR (7 DOWNTO 0);
+				 wren: IN STD_LOGIC  := '0';
+				 q: OUT STD_LOGIC_VECTOR (7 DOWNTO 0) );
+	END COMPONENT;
+	
+	COMPONENT smac_controller IS
+		PORT ( clk: IN STD_LOGIC;
+				 
+				 reset: IN STD_LOGIC;
+				 
+				 node_address: IN STD_LOGIC(15 DOWNTO 0);
+				 
+				 app_tx_send: IN STD_LOGIC;
+				 app_tx_dst: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 app_tx_len: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 app_tx_done: OUT STD_LOGIC;
+				 app_rx_src: OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 app_rx_len: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 app_rx_done: OUT STD_LOGIC;
+				 
+				 tx_reset: OUT STD_LOGIC;
+				 tx_load: OUT STD_LOGIC;
+				 tx_send: OUT STD_LOGIC;
+				 tx_ready: IN STD_LOGIC;
+				 tx_packet_type: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 tx_packet_src: OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 tx_packet_dst: OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 tx_packet_dur: OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 tx_packet_seq: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 tx_packet_sleeptime: OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 tx_packet_payload_len: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 
+				 rx_reset: OUT STD_LOGIC;
+				 rx_receive: OUT STD_LOGIC;
+				 rx_store: OUT STD_LOGIC;
+				 rx_ready: IN STD_LOGIC;
+				 rx_error: IN STD_LOGIC;
+				 rx_packet_type: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 rx_packet_src: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 rx_packet_dst: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 rx_packet_dur: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 rx_packet_seq: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 rx_packet_sleeptime: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 rx_packet_payload_len: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+
+				 phy_enable: OUT STD_LOGIC;
+				 phy_rx_active: IN STD_LOGIC );
+	END COMPONENT;
+	
+	COMPONENT app IS
+		PORT ( clk: IN STD_LOGIC;
+				 
+				 reset: IN STD_LOGIC;
+				 
+				 tx_send: OUT STD_LOGIC;
+				 tx_dst: OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 tx_len: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 tx_done: IN STD_LOGIC;
+				 rx_src: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				 rx_len: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+				 rx_done: IN STD_LOGIC );
+	END COMPONENT;
+	
+	SIGNAL reset: STD_LOGIC;
+	
+	SIGNAL smac_reset: STD_LOGIC;
+	
+	SIGNAL smac_node_address: STD_LOGIC_VECTOR(15 DOWNTO 0) := "0000000000000001";
+	
+	SIGNAL smac_app_tx_send: STD_LOGIC;
+	SIGNAL smac_app_tx_dst: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_app_tx_len: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_app_tx_done: STD_LOGIC;
+	SIGNAL smac_app_rx_src: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_app_rx_len: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_app_rx_done: STD_LOGIC;
+	
+	SIGNAL smac_tx_reset: STD_LOGIC;
+	SIGNAL smac_tx_load: STD_LOGIC;
+	SIGNAL smac_tx_send: STD_LOGIC;
+	SIGNAL smac_tx_ready: STD_LOGIC;
+	SIGNAL smac_tx_packet_type: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_tx_packet_src: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_tx_packet_dst: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_tx_packet_dur: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_tx_packet_seq: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_tx_packet_sleeptime: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_tx_packet_payload_len: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	
+	SIGNAL smac_tx_payload_address: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_tx_payload_data: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	
+	SIGNAL smac_tx_crc_reset: STD_LOGIC;
+	SIGNAL smac_tx_crc_soc: STD_LOGIC;
+	SIGNAL smac_tx_crc_data: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_tx_crc_data_valid: STD_LOGIC;
+	SIGNAL smac_tx_crc_eoc: STD_LOGIC;
+	SIGNAL smac_tx_crc_crc: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_tx_crc_crc_valid: STD_LOGIC;
+	
+	SIGNAL smac_tx_ram_address: STD_LOGIC_VECTOR(8 DOWNTO 0);
+	SIGNAL smac_tx_ram_data_in: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_tx_ram_wren: STD_LOGIC;
+	SIGNAL smac_tx_ram_data_out: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	
+	SIGNAL smac_tx_phy_tx_data: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_tx_phy_tx_enable: STD_LOGIC;
+	SIGNAL smac_tx_phy_tx_ready: STD_LOGIC;
+	
+	SIGNAL smac_rx_reset: STD_LOGIC;
+	SIGNAL smac_rx_receive: STD_LOGIC;
+	SIGNAL smac_rx_store: STD_LOGIC;
+	SIGNAL smac_rx_ready: STD_LOGIC;
+	SIGNAL smac_rx_error: STD_LOGIC;
+	SIGNAL smac_rx_packet_type: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_rx_packet_src: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_rx_packet_dst: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_rx_packet_dur: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_rx_packet_seq: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_rx_packet_sleeptime: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_rx_packet_payload_len: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	 
+	SIGNAL smac_rx_payload_address: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_rx_payload_data: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_rx_payload_wren: STD_LOGIC;
+	 
+	SIGNAL smac_rx_crc_reset: STD_LOGIC;
+	SIGNAL smac_rx_crc_soc: STD_LOGIC;
+	SIGNAL smac_rx_crc_data: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_rx_crc_data_valid: STD_LOGIC;
+	SIGNAL smac_rx_crc_eoc: STD_LOGIC;
+	SIGNAL smac_rx_crc_crc: STD_LOGIC_VECTOR(15 DOWNTO 0);
+	SIGNAL smac_rx_crc_crc_valid: STD_LOGIC;
+	 
+	SIGNAL smac_rx_ram_address: STD_LOGIC_VECTOR(8 DOWNTO 0);
+	SIGNAL smac_rx_ram_data_in: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_rx_ram_wren: STD_LOGIC;
+	SIGNAL smac_rx_ram_data_out: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	
+	SIGNAL smac_rx_phy_rx_data: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL smac_rx_phy_rx_enable: STD_LOGIC;
+	SIGNAL smac_rx_phy_rx_error: STD_LOGIC;
+	
+	SIGNAL smac_phy_enable: STD_LOGIC;
+	SIGNAL smac_phy_rx_active: STD_LOGIC;
+	
+	SIGNAL app_tx_ram_address: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL app_tx_ram_data: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL app_tx_ram_wren: STD_LOGIC := '0';
+	
+	SIGNAL app_rx_ram_address: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	SIGNAL app_rx_ram_data: STD_LOGIC_VECTOR(7 DOWNTO 0);
+	
+BEGIN
+	basic_uart_inst: basic_uart
+	GENERIC MAP (DIVISOR => 326) -- 9600 bps
+	PORT MAP ( clk => clk,
+				  reset => reset,
+				  rx_active => phy_rx_active,
+				  rx_data => smac_rx_phy_rx_data,
+				  rx_enable => smac_rx_phy_rx_enable,
+				  rx_error => smac_rx_phy_rx_error,
+				  tx_data => smac_tx_phy_tx_data,
+				  tx_enable => smac_tx_phy_tx_enable,
+				  tx_ready => smac_tx_phy_tx_ready,
+				  rx => rf_rx,
+				  tx => rf_tx );
+	
+	smac_tx_controller_inst: smac_tx_controller
+	PORT MAP ( clk => clk,
+				  
+				  reset => smac_tx_reset,
+				  load => smac_tx_load,
+				  send => smac_tx_send,
+				  ready => smac_tx_ready,				  
+				  packet_type => smac_tx_packet_type,
+				  packet_src => smac_tx_packet_src,
+				  packet_dst => smac_tx_packet_dst,
+				  packet_dur => smac_tx_packet_dur,
+				  packet_seq => smac_tx_packet_seq,
+				  packet_sleeptime => smac_tx_packet_sleeptime,
+				  packet_payload_len => smac_tx_packet_payload_len,
+				  
+				  payload_address => smac_tx_payload_address,
+				  payload_data => smac_tx_payload_data,
+				  
+				  crc_reset => smac_tx_crc_reset,
+				  crc_soc => smac_tx_crc_soc,
+				  crc_data => smac_tx_crc_data,
+				  crc_data_valid => smac_tx_crc_data_valid,
+				  crc_eoc => smac_tx_crc_eoc,
+				  crc_crc => smac_tx_crc_crc,
+				  crc_crc_valid => smac_tx_crc_crc_valid,
+				  
+				  ram_address => smac_tx_ram_address,
+				  ram_data_in => smac_tx_ram_data_in,
+				  ram_wren => smac_tx_ram_wren,
+				  ram_data_out => smac_tx_ram_data_out,
+				  				  
+				  phy_tx_data => smac_tx_phy_tx_data,
+				  phy_tx_enable => smac_tx_phy_tx_enable,
+				  phy_tx_ready => smac_tx_phy_tx_ready );
+				  
+	smac_tx_ram512_inst: ram512
+	PORT MAP ( address => smac_tx_ram_address,
+				  clock => clk,
+				  data => smac_tx_ram_data_in,
+				  wren => smac_tx_ram_wren,
+				  q => smac_tx_ram_data_out );
+				  
+	smac_tx_crc_gen_inst: crc_gen
+	PORT MAP ( clock => clk, 
+				  reset => smac_tx_crc_reset,
+				  soc => smac_tx_crc_soc,
+				  data => smac_tx_crc_data,
+				  data_valid => smac_tx_crc_data_valid,
+				  eoc => smac_tx_crc_eoc,
+				  crc => smac_tx_crc_crc,
+				  crc_valid => smac_tx_crc_crc_valid);
+				  
+	smac_rx_controller_inst: smac_rx_controller
+	PORT MAP ( clk => clk,
+				 
+				  reset => smac_rx_reset,
+				  receive => smac_rx_receive,
+				  store => smac_rx_store,
+				  ready => smac_rx_ready,
+				  error => smac_rx_error,
+				  packet_type => smac_rx_packet_type,
+				  packet_src => smac_rx_packet_src,
+				  packet_dst => smac_rx_packet_dst,
+				  packet_dur => smac_rx_packet_dur,
+				  packet_seq => smac_rx_packet_seq,
+				  packet_sleeptime => smac_rx_packet_sleeptime,
+				  packet_payload_len => smac_rx_packet_payload_len,
+				  
+				  payload_address => smac_rx_payload_address,
+				  payload_data => smac_rx_payload_data,
+				  payload_wren => smac_rx_payload_wren,
+				  
+				  crc_reset => smac_rx_crc_reset,
+				  crc_soc => smac_rx_crc_soc,
+				  crc_data => smac_rx_crc_data,
+				  crc_data_valid => smac_rx_crc_data_valid,
+				  crc_eoc => smac_rx_crc_eoc,
+				  crc_crc => smac_rx_crc_crc,
+				  crc_crc_valid => smac_rx_crc_crc_valid,
+				  
+				  ram_address => smac_rx_ram_address,
+				  ram_data_in => smac_rx_ram_data_in,
+				  ram_wren => smac_rx_ram_wren,
+				  ram_data_out => smac_rx_ram_data_out,
+				  
+				  phy_rx_data => smac_rx_phy_rx_data,
+				  phy_rx_enable => smac_rx_phy_rx_enable,
+				  phy_rx_error => smac_rx_phy_rx_error );
+	
+	smac_rx_ram512_inst: ram512
+	PORT MAP ( address => smac_rx_ram_address,
+				  clock => clk,
+				  data => smac_rx_ram_data_in,
+				  wren => smac_rx_ram_wren,
+				  q => smac_rx_ram_data_out );
+	
+	smac_rx_crc_gen_inst: crc_gen
+	PORT MAP ( clock => clk, 
+				  reset => smac_rx_crc_reset,
+				  soc => smac_rx_crc_soc,
+				  data => smac_rx_crc_data,
+				  data_valid => smac_rx_crc_data_valid,
+				  eoc => smac_rx_crc_eoc,
+				  crc => smac_rx_crc_crc,
+				  crc_valid => smac_rx_crc_crc_valid);
+	
+	app_tx_ram256dp_inst: ram256dp
+	PORT MAP ( clock => clk,
+				  data => app_tx_ram_data,
+				  rdaddress => smac_tx_payload_address,
+				  wraddress => app_tx_ram_address,
+				  wren => app_tx_ram_wren,
+				  q => smac_tx_payload_data );
+				  
+	app_rx_ram256dp_inst: ram256dp
+	PORT MAP ( clock => clk,
+				  data => smac_rx_payload_data,
+				  rdaddress => app_rx_ram_address,
+				  wraddress => smac_rx_payload_address,
+				  wren => smac_rx_payload_wren,
+				  q => app_rx_ram_data );
+				  
+	smac_controller_inst: smac_controller
+	PORT MAP ( clk => clk,
+				  
+				  reset => reset,
+				  
+				  node_address => smac_node_address,
+				  
+				  app_tx_send => smac_app_tx_send,
+				  app_tx_dst => smac_app_tx_dst,
+				  app_tx_len => smac_app_tx_len,
+				  app_tx_done => smac_app_tx_done,
+				  app_rx_src => smac_app_rx_src,
+				  app_rx_len => smac_app_rx_len,
+				  app_rx_done => smac_app_rx_done,
+				  
+				  tx_reset => smac_tx_reset,
+				  tx_load => smac_tx_load,
+				  tx_send => smac_tx_send,
+				  tx_ready => smac_tx_ready,
+				  tx_packet_type => smac_tx_packet_type,
+				  tx_packet_src => smac_tx_packet_src,
+				  tx_packet_dst => smac_tx_packet_dst,
+				  tx_packet_dur => smac_tx_packet_dur,
+				  tx_packet_seq => smac_tx_packet_seq,
+				  tx_packet_sleeptime => smac_tx_packet_sleeptime,
+				  tx_packet_payload_len => tx_packet_payload_len,
+				  
+				  rx_reset: OUT STD_LOGIC;
+				  rx_receive: OUT STD_LOGIC;
+				  rx_store: OUT STD_LOGIC;
+				  rx_ready: IN STD_LOGIC;
+				  rx_error: IN STD_LOGIC;
+				  rx_packet_type: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+				  rx_packet_src: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				  rx_packet_dst: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				  rx_packet_dur: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				  rx_packet_seq: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+				  rx_packet_sleeptime: IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+				  rx_packet_payload_len: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+	
+	app_inst: app
+	PORT MAP ();
+				  
+	rf_enable <= smac_phy_enable;
+
+	reset <= NOT(rst);
+	
+END arch_smac;

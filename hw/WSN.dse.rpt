@@ -1,0 +1,133 @@
+
+Design Space Explorer Report
+-------------------------------------------------------------------------------
+
++------------------------------------------------------------------------+
+| Report Information                                                     |
++------------------------------------------------------------------------+
++--------------------+---------------------------------------------------------------------+
+| Start Date & Time  | Wed Jul 31 03:24:45 CEST 2013                                       |
+| Working Directory  | C:/Users/Enio/SkyDrive/Documents/PhD/Semestar 1/MAOH/Seminarski/WSN |
+| Project Name       | WSN                                                                 |
+| Revision Name      | WSN                                                                 |
+| Quartus II Version | Version 12.1 Build 177 11/07/2012 SJ Full Version                   |
++--------------------+---------------------------------------------------------------------+
+
+Table of Contents
+    Report Information
+    Legal Notice
+    Flow Messages
+    Flow Summary
+
++-----------------------------------------------------------------------------+
+| Legal Notice                                                                |
++-----------------------------------------------------------------------------+
+Copyright (C) 1991-2012 Altera Corporation. All rights reserved.
+Any  megafunction  design,  and related netlist (encrypted  or  decrypted),
+support information,  device programming or simulation file,  and any other
+associated  documentation or information  provided by  Altera  or a partner
+under  Altera's   Megafunction   Partnership   Program  may  be  used  only
+to program  PLD  devices (but not masked  PLD  devices) from  Altera.   Any
+other  use  of such  megafunction  design,  netlist,  support  information,
+device programming or simulation file,  or any other  related documentation
+or information  is prohibited  for  any  other purpose,  including, but not
+limited to  modification,  reverse engineering,  de-compiling, or use  with
+any other  silicon devices,  unless such use is  explicitly  licensed under
+a separate agreement with  Altera  or a megafunction partner.  Title to the
+intellectual property,  including patents,  copyrights,  trademarks,  trade
+secrets,  or maskworks,  embodied in any such megafunction design, netlist,
+support  information,  device programming or simulation file,  or any other
+related documentation or information provided by  Altera  or a megafunction
+partner, remains with Altera, the megafunction partner, or their respective
+licensors. No other licenses, including any licenses needed under any third
+party's intellectual property, are provided herein.
+
++-----------------------------------------------------------------------------+
+| Flow Messages                                                               |
++-----------------------------------------------------------------------------+
+
+Info: Loading space: Power Optimization Space
+Info: Loading space: Seeds
+Info: Design space contains 20 points
+
++-----------------------------------------------------------------------------+
+| Settings for base                                                           |
++-----------------------------------------------------------------------------+
++----------------------------------+--------------+
+| Setting                          | Value        |
++----------------------------------+--------------+
+| OPTIMIZE_POWER_DURING_FITTING    | OFF          |
+| MUX_RESTRUCTURE                  | AUTO         |
+| SEED                             | 1            |
+| CYCLONEII_OPTIMIZATION_TECHNIQUE | AREA         |
+| OPTIMIZE_POWER_DURING_SYNTHESIS  | EXTRA EFFORT |
++----------------------------------+--------------+
+
+
++----------------------------------------------------------------------------+
+| QSF Setting                                                                |
++----------------------------------------------------------------------------+
+| set_global_assignment -name OPTIMIZE_POWER_DURING_FITTING OFF              |
+| set_global_assignment -name MUX_RESTRUCTURE AUTO                           |
+| set_global_assignment -name SEED 1                                         |
+| set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE AREA          |
+| set_global assignment -name OPTIMIZE_POWER_DURING_SYNTHESIS "EXTRA EFFORT" |
++----------------------------------------------------------------------------+
+
+Info: Compiling revision WSN
+Error: Base compilation failed -- halting exploration
+Error: No output from failed base compilation was found
+Info: Halting exploration
+Warning: No results from base compilation were recorded
+
++-----------------------------------------------------------------------------+
+| Results for base                                                            |
++-----------------------------------------------------------------------------+
++--+--+
++--+--+
+
+
++-----------------------------------------------------------------------------+
+| Detailed Cumulative Results                                                 |
++-----------------------------------------------------------------------------+
++-------+
+| Point |
++-------+
+| base  |
++-------+
+
+Info: Restoring base settings at end of flow
+
++-----------------------------------------------------------------------------+
+| Flow Summary                                                                |
++-----------------------------------------------------------------------------+
+
++-----------------------------------------------------------------------------+
+| Detailed Results                                                            |
++-----------------------------------------------------------------------------+
++-------+
+| Point |
++-------+
+| base  |
++-------+
+
+
++-----------------------------------------------------------------------------+
+| Results for Base                                                            |
++-----------------------------------------------------------------------------+
++--+--+
++--+--+
+
+Info: Best results were your base results
+Warning: No base results available -- skipping signature table printing
+
++-----------------------------------------------------------------------------+
+| Circuit Signature Compile Groups                                            |
++-----------------------------------------------------------------------------+
++------------+---------------+----------------+
+| Group Name | Group Members | Group Settings |
++------------+---------------+----------------+
+
+Info: Exploration has finished. 2 errors, 2 warnings
+Info: Exploration ended: Wed Jul 31 03:24:55 CEST 2013
+Info: Elapsed time: 00:00:09

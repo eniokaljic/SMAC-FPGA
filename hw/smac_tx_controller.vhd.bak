@@ -1,0 +1,19 @@
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.STD_LOGIC_UNSIGNED.ALL;
+USE IEEE.NUMERIC_STD.ALL;
+
+ENTITY smac_tx_controller IS
+	PORT ( clk: IN STD_LOGIC;
+			 reset: IN STD_LOGIC;
+			 
+			 address: IN STD_LOGIC_VECTOR(8 DOWNTO 0);
+			 data: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+			 wren: IN STD_LOGIC;
+			 len: IN STD_LOGIC_VECTOR(8 DOWNTO 0);
+			 send: IN STD_LOGIC;
+			 ready: OUT STD_LOGIC;
+			 phy_tx_data: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+			 phy_tx_enable: OUT STD_LOGIC;
+			 phy_tx_ready: IN STD_LOGIC );
+END smac_tx_controller;
