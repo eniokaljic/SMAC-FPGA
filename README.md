@@ -1,0 +1,2 @@
+# SMAC-FPGA
+FPGA RTL for S-MAC WSN Protocol
